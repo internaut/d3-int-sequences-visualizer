@@ -11,6 +11,17 @@
         background: black;
         border: 1px solid white;
     }
+
+    .section text {
+        font-size: 22px;
+        font-weight: bold;
+        fill: white;
+    }
+
+    .connection {
+        stroke: white;
+        fill: none;
+    }
 </style>
 <body>
 <script src="d3.js" charset="utf-8"></script>
@@ -18,7 +29,7 @@
 <script>
     var width = 700,
         height = 700,
-        innerRadius = Math.min(width, height) * .3,
+        innerRadius = Math.min(width, height) * .4,
         outerRadius = innerRadius * 1.1;
 
     var from0to9 = [];
@@ -59,19 +70,45 @@
     var sectionPath = section.append("path")
             .attr("id", function(d, i) { return "section" + i; })
             .attr("d", arc)
+            .attr("centroid", arc.centroid)
             .style("fill", function(d, i) { return fillPerDigit(i); })
             .style("stroke", function(d, i) { return fillPerDigit(i); });
+
+    var sectionText = section.append("text")
+            .attr("x", 93)
+            .attr("dy", 21);
+    sectionText.append("textPath")
+            .attr("xlink:href", function(d, i) { return "#section" + i; })
+            .text(function(d) { return d.value; });
+
+
 
     d3.text('pi.txt', function (content) {
         var dotIdx = content.indexOf('.') + 1;
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits(digits);
+        drawDigits('1415');
     });
 
     function drawDigits(digits) {
-        //console.log(digits);
+        linePoints = [];
+
+        for (var i = 0; i < digits.length; i++) {
+            var dgt = digits.charAt(i);
+            var section = svg.select("#section" + dgt);
+            var centroid = section.attr("centroid").split(",");
+            centroid[0] = parseFloat(centroid[0]);
+            centroid[1] = parseFloat(centroid[1]);
+
+            linePoints.push(centroid);
+        }
+
+        var line = d3.svg.line()
+                .x(function (d) { return d[0] })
+                .y(function (d) { return d[1] });
+        var connection = svg.append("g").attr("class", "connection");
+        var connectionLine = connection.append("path").attr("d", line(linePoints));
     }
 </script>
 
