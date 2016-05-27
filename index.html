@@ -27,6 +27,14 @@
 <script src="d3.js" charset="utf-8"></script>
 
 <script>
+    /**
+     * TODOs:
+     * - make interpolate fn selectable
+     * - make constant selectable: pi, euler, etc.
+     * - draw symbol of constant in background
+     * - allow to enter own constant
+     */
+
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
@@ -88,27 +96,31 @@
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits('1415');
+        drawDigits('141592');
     });
 
     function drawDigits(digits) {
-        linePoints = [];
-
-        for (var i = 0; i < digits.length; i++) {
-            var dgt = digits.charAt(i);
-            var section = svg.select("#section" + dgt);
-            var centroid = section.attr("centroid").split(",");
-            centroid[0] = parseFloat(centroid[0]);
-            centroid[1] = parseFloat(centroid[1]);
-
-            linePoints.push(centroid);
-        }
+        var connection = svg.append("g").attr("class", "connection");
 
         var line = d3.svg.line()
                 .x(function (d) { return d[0] })
-                .y(function (d) { return d[1] });
-        var connection = svg.append("g").attr("class", "connection");
-        var connectionLine = connection.append("path").attr("d", line(linePoints));
+                .y(function (d) { return d[1] })
+                .interpolate("basis");
+
+        var middlePoint = [0, 0];
+        var prevPoint = null;
+        for (var i = 0; i < digits.length; i++) {
+            var dgt = digits.charAt(i);
+            var section = svg.select("#section" + dgt);
+            var secCentroid = section.attr("centroid").split(",");
+            var thisPoint = [parseFloat(secCentroid[0]), parseFloat(secCentroid[1])];
+
+            if (prevPoint != null) {
+                var connectionLine = connection.append("path").attr("d", line([prevPoint, middlePoint, thisPoint]));
+            }
+
+            prevPoint = thisPoint;
+        }
     }
 </script>
 
