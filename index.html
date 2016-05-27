@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+	body {
+		font: 10px sans-serif;
+        background: black;
+        color: white;
+	}
+
+    svg {
+        background: black;
+        border: 1px solid white;
+    }
+</style>
+<body>
+<script src="d3.js" charset="utf-8"></script>
+
+<script>
+    var width = 700,
+        height = 700,
+        innerRadius = Math.min(width, height) * .3,
+        outerRadius = innerRadius * 1.1;
+
+    var from0to9 = [];
+    for (var i = 0; i < 10; i++) {
+        from0to9.push(String(i));
+    }
+
+    var from0to9ArcData = [];
+    from0to9.forEach(function (digit, i) {
+        var arcDataObj = {
+            index: i,
+            value: digit,
+            startAngle: Math.PI * .2 * i,
+            endAngle: Math.PI * .2 * (i + 1)
+        };
+
+        from0to9ArcData.push(arcDataObj);
+    });
+
+
+    var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+    var fillPerDigit = d3.scale.category10().domain(d3.range(0, 10));
+
+    var arc = d3.svg.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(outerRadius);
+
+    var section = svg.append("g").selectAll(".section")
+            .data(from0to9ArcData)
+            .enter().append("g")
+            .attr("class", "section");
+
+    var sectionPath = section.append("path")
+            .attr("id", function(d, i) { return "section" + i; })
+            .attr("d", arc)
+            .style("fill", function(d, i) { return fillPerDigit(i); })
+            .style("stroke", function(d, i) { return fillPerDigit(i); });
+
+    d3.text('pi.txt', function (content) {
+        var dotIdx = content.indexOf('.') + 1;
+        var fromDot = content.substr(dotIdx);
+        var digits = fromDot.replace(/[\D]/g, '');
+
+        drawDigits(digits);
+    });
+
+    function drawDigits(digits) {
+        //console.log(digits);
+    }
+</script>
+
+</body>
