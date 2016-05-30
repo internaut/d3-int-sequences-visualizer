@@ -29,16 +29,26 @@
 <script>
     /**
      * TODOs:
+     * - adjust middle point
+     * - line transparency
+     * - line gradients
+     *
+     * - drawing animation
+     *
      * - make interpolate fn selectable
      * - make constant selectable: pi, euler, etc.
      * - draw symbol of constant in background
      * - allow to enter own constant
+     * - number of digits to draw
+     * - adjust transparency
      */
 
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
         outerRadius = innerRadius * 1.1;
+
+    var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
 
     var from0to9 = [];
     for (var i = 0; i < 10; i++) {
@@ -50,8 +60,8 @@
         var arcDataObj = {
             index: i,
             value: digit,
-            startAngle: Math.PI * .2 * i,
-            endAngle: Math.PI * .2 * (i + 1)
+            startAngle: secCircum * i,
+            endAngle: secCircum * (i + 1)
         };
 
         from0to9ArcData.push(arcDataObj);
@@ -96,10 +106,12 @@
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits('141592');
+        drawDigits(digits.substr(0, 100));
     });
 
     function drawDigits(digits) {
+        var hist = histForDigits(digits);
+
         var connection = svg.append("g").attr("class", "connection");
 
         var line = d3.svg.line()
@@ -109,18 +121,47 @@
 
         var middlePoint = [0, 0];
         var prevPoint = null;
+        var drawn = new Array(10).fill(0);
         for (var i = 0; i < digits.length; i++) {
             var dgt = digits.charAt(i);
-            var section = svg.select("#section" + dgt);
-            var secCentroid = section.attr("centroid").split(",");
-            var thisPoint = [parseFloat(secCentroid[0]), parseFloat(secCentroid[1])];
+            var dgtInt = parseInt(dgt);
+
+            var numOfThisDigit = hist[dgtInt];  // *must* be > 0
+
+            var arcObj = from0to9ArcData[dgtInt];
+            //console.log(arcObj);
+            var angStart = arcObj.startAngle - secCircum * 2.0 - secCircum / 2.0;  // don't know why we have to substract two sections
+            var angSec = secCircum / (numOfThisDigit + 1);
+            var ang = angStart + (drawn[dgtInt] + 1) * angSec;
+            var arcCx = innerRadius * Math.cos(ang);
+            var arcCy = innerRadius * Math.sin(ang);
+            var thisPoint = [arcCx, arcCy];
+
+            //var section = svg.select("#section" + dgt);
+            //var secCentroid = section.attr("centroid").split(",");
+            //var thisPoint = [parseFloat(secCentroid[0]), parseFloat(secCentroid[1])];
 
             if (prevPoint != null) {
                 var connectionLine = connection.append("path").attr("d", line([prevPoint, middlePoint, thisPoint]));
             }
 
+            drawn[dgtInt]++;
             prevPoint = thisPoint;
         }
+    }
+
+    function histForDigits(digits) {
+
+        // init
+        var hist = new Array(10).fill(0);
+
+        // count
+        for (var i = 0; i < digits.length; i++) {
+            var dgt = digits.charAt(i);
+            hist[parseInt(dgt)]++;
+        }
+
+        return hist;
     }
 </script>
 
