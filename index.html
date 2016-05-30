@@ -19,8 +19,9 @@
     }
 
     .connection {
-        stroke: white;
+        /*stroke: white;*/
         stroke-width: 2;
+        stroke-opacity: 0.75;
         fill: none;
     }
 </style>
@@ -30,9 +31,6 @@
 <script>
     /**
      * TODOs:
-     * - line transparency
-     * - line gradients
-     *
      * - drawing animation
      *
      * - make interpolate fn selectable
@@ -107,21 +105,22 @@
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits(digits.substr(0, 100));
+        drawDigits(digits.substr(0, 10));
     });
 
     function drawDigits(digits) {
         var hist = histForDigits(digits);
 
-        var connection = svg.append("g").attr("class", "connection");
+        var connectionGroup = svg.append("g").attr("class", "connection");
+        var grads = svg.selectAll("linearGradient");
 
         var line = d3.svg.line()
                 .x(function (d) { return d[0] })
                 .y(function (d) { return d[1] })
                 .interpolate("basis");
 
-        var middlePoint = [0, 0];
         var prevPoint = null;
+        var prevDgt = null;
         var drawn = new Array(10).fill(0);
         for (var i = 0; i < digits.length; i++) {
             var dgt = digits.charAt(i);
@@ -145,21 +144,38 @@
                 middlePointRadius * Math.sin(ang)
             ];
 
-            //var section = svg.select("#section" + dgt);
-            //var secCentroid = section.attr("centroid").split(",");
-            //var thisPoint = [parseFloat(secCentroid[0]), parseFloat(secCentroid[1])];
-
             if (prevPoint != null) {
-                var connectionLine = connection.append("path").attr("d", line([prevPoint, middlePoint, thisPoint]));
+                // add gradient
+                var gradId = "line-grad-" + prevDgt + "-" + dgt;
+
+                if (svg.select(gradId).node() == null) {
+                    svg.append("linearGradient")
+                            .attr("id", gradId)
+                            .attr("gradientUnits", "userSpaceOnUse")
+                            .attr("x1", prevPoint[0]).attr("y1", prevPoint[1])
+                            .attr("x2", thisPoint[0]).attr("y2", prevPoint[1])
+                            .selectAll("stop")
+                            .data(function (d) { return [prevDgt, dgt]})
+                            .enter().append("stop")
+                            .attr("offset", function(_, i) { return i * 100 + "%"; })
+                            .attr("stop-color", function(d) {
+                                return d3.rgb(fillPerDigit(d));
+                            });
+                }
+
+                // add connection line
+                var connectionLine = connectionGroup.append("path")
+                        .attr("d", line([prevPoint, middlePoint, thisPoint]))
+                        .style("stroke", function(d) { return "url(#" + gradId });
             }
 
             drawn[dgtInt]++;
             prevPoint = thisPoint;
+            prevDgt = dgt;
         }
     }
 
     function histForDigits(digits) {
-
         // init
         var hist = new Array(10).fill(0);
 
