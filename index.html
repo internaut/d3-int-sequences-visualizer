@@ -45,7 +45,7 @@
         height = 700,
         innerRadius = Math.min(width, height) * .4,
         outerRadius = innerRadius * 1.1,
-        middlePointRadius = innerRadius * 0.7;
+        middlePointRadius = innerRadius * 0.5;
 
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
 
@@ -92,8 +92,8 @@
             .style("stroke", function(d, i) { return fillPerDigit(i); });
 
     var sectionText = section.append("text")
-            .attr("x", 93)
-            .attr("dy", 21);
+            .attr("x", 90)
+            .attr("dy", 22);
     sectionText.append("textPath")
             .attr("xlink:href", function(d, i) { return "#section" + i; })
             .text(function(d) { return d.value; });
@@ -105,7 +105,7 @@
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits(digits.substr(0, 10));
+        drawDigits(digits.substr(0, 200));
     });
 
     function drawDigits(digits) {
@@ -153,7 +153,7 @@
                             .attr("id", gradId)
                             .attr("gradientUnits", "userSpaceOnUse")
                             .attr("x1", prevPoint[0]).attr("y1", prevPoint[1])
-                            .attr("x2", thisPoint[0]).attr("y2", prevPoint[1])
+                            .attr("x2", thisPoint[0]).attr("y2", thisPoint[1])
                             .selectAll("stop")
                             .data(function (d) { return [prevDgt, dgt]})
                             .enter().append("stop")
