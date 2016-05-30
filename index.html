@@ -20,6 +20,7 @@
 
     .connection {
         stroke: white;
+        stroke-width: 2;
         fill: none;
     }
 </style>
@@ -29,7 +30,6 @@
 <script>
     /**
      * TODOs:
-     * - adjust middle point
      * - line transparency
      * - line gradients
      *
@@ -46,7 +46,8 @@
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
-        outerRadius = innerRadius * 1.1;
+        outerRadius = innerRadius * 1.1,
+        middlePointRadius = innerRadius * 0.7;
 
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
 
@@ -133,9 +134,16 @@
             var angStart = arcObj.startAngle - secCircum * 2.0 - secCircum / 2.0;  // don't know why we have to substract two sections
             var angSec = secCircum / (numOfThisDigit + 1);
             var ang = angStart + (drawn[dgtInt] + 1) * angSec;
-            var arcCx = innerRadius * Math.cos(ang);
-            var arcCy = innerRadius * Math.sin(ang);
-            var thisPoint = [arcCx, arcCy];
+
+            var thisPoint = [
+                innerRadius * Math.cos(ang),
+                innerRadius * Math.sin(ang)
+            ];
+
+            var middlePoint = [
+                middlePointRadius * Math.cos(ang),
+                middlePointRadius * Math.sin(ang)
+            ];
 
             //var section = svg.select("#section" + dgt);
             //var secCentroid = section.attr("centroid").split(",");
