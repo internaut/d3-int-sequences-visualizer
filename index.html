@@ -23,6 +23,12 @@
         stroke-width: 2;
         fill: none;
     }
+
+    #bgSymbol {
+        fill: white;
+        fill-opacity: 0.75;
+        font-style: italic;
+    }
 </style>
 <body>
 <script src="d3.js" charset="utf-8"></script>
@@ -32,10 +38,10 @@
      * TODOs:
      * - make interpolate fn selectable
      * - make constant selectable: pi, euler, etc.
-     * - draw symbol of constant in background
      * - allow to enter own constant
      * - number of digits to draw
      * - adjust transparency
+     * - export to PDF
      */
 
     var width = 700,
@@ -74,6 +80,14 @@
             .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
     var fillPerDigit = d3.scale.category10().domain(d3.range(0, 10));
+
+    var bgSymbol = svg.append("text")
+            .attr("id", "bgSymbol")
+            .style("font-size", Math.min(width, height) * 0.5)
+            .text("π");
+    var bgSymbolSize = [bgSymbol.node().clientWidth, bgSymbol.node().clientHeight];
+    bgSymbol.attr("dx", -bgSymbolSize[0] / 2.0);
+    bgSymbol.attr("dy", bgSymbolSize[1] / 4.0);
 
     var arc = d3.svg.arc()
             .innerRadius(innerRadius)
@@ -167,7 +181,6 @@
 
                 // add connection line
                 var animMs = animMaxMs * (1 - (1 + Math.log((numAddedLines + 1) / (digits.length - 1)) / (Math.E * Math.E)));
-                console.log((numAddedLines + 1) / (digits.length - 1), animMs);
                 var connectionLine = connectionGroup.append("path")
                         .attr("d", line([prevPoint, middlePoint, thisPoint]))
                         .style("stroke", function(d) { return "url(#" + gradId })
@@ -185,10 +198,6 @@
             prevPoint = thisPoint;
             prevDgt = dgt;
         }
-    }
-
-    function log2(x) {
-        return Math.log()
     }
 
     function histForDigits(digits) {
