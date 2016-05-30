@@ -21,7 +21,6 @@
     .connection {
         /*stroke: white;*/
         stroke-width: 2;
-        stroke-opacity: 0.75;
         fill: none;
     }
 </style>
@@ -31,8 +30,6 @@
 <script>
     /**
      * TODOs:
-     * - drawing animation
-     *
      * - make interpolate fn selectable
      * - make constant selectable: pi, euler, etc.
      * - draw symbol of constant in background
@@ -46,6 +43,9 @@
         innerRadius = Math.min(width, height) * .4,
         outerRadius = innerRadius * 1.1,
         middlePointRadius = innerRadius * 0.5;
+
+    var animMaxMs = 500;
+    var numDigitsToDraw = 100;
 
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
 
@@ -105,7 +105,7 @@
         var fromDot = content.substr(dotIdx);
         var digits = fromDot.replace(/[\D]/g, '');
 
-        drawDigits(digits.substr(0, 200));
+        drawDigits(digits.substr(0, numDigitsToDraw));
     });
 
     function drawDigits(digits) {
@@ -121,7 +121,9 @@
 
         var prevPoint = null;
         var prevDgt = null;
+        var prevAnimMs = 0;
         var drawn = new Array(10).fill(0);
+        var numAddedLines = 0;
         for (var i = 0; i < digits.length; i++) {
             var dgt = digits.charAt(i);
             var dgtInt = parseInt(dgt);
@@ -164,15 +166,29 @@
                 }
 
                 // add connection line
+                var animMs = animMaxMs * (1 - (1 + Math.log((numAddedLines + 1) / (digits.length - 1)) / (Math.E * Math.E)));
+                console.log((numAddedLines + 1) / (digits.length - 1), animMs);
                 var connectionLine = connectionGroup.append("path")
                         .attr("d", line([prevPoint, middlePoint, thisPoint]))
-                        .style("stroke", function(d) { return "url(#" + gradId });
+                        .style("stroke", function(d) { return "url(#" + gradId })
+                        .style("stroke-opacity", 0.0)
+                        .transition()
+                        .duration(animMs)
+                        .delay(prevAnimMs)
+                        .style("stroke-opacity", 0.75);
+
+                prevAnimMs = prevAnimMs + animMs;
+                numAddedLines++;
             }
 
             drawn[dgtInt]++;
             prevPoint = thisPoint;
             prevDgt = dgt;
         }
+    }
+
+    function log2(x) {
+        return Math.log()
     }
 
     function histForDigits(digits) {
