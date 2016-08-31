@@ -26,7 +26,10 @@
 
     #bgSymbol {
         fill: white;
-        fill-opacity: 0.75;
+        stroke: white;
+        stroke-opacity: 0.5;
+        stroke-width: 2;
+        fill-opacity: 0.33;
         font-style: italic;
     }
 </style>
@@ -44,6 +47,10 @@
      * - export to PDF
      */
 
+    /*
+     Define some constants
+     */
+     
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
@@ -54,12 +61,19 @@
     var numDigitsToDraw = 100;
 
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
+    
+    /*
+     Define the digits for the arc as array
+     */
 
     var from0to9 = [];
     for (var i = 0; i < 10; i++) {
         from0to9.push(String(i));
     }
 
+    /*
+     An arc data object consists of the index, value (the digit itself) and the start and end angle of the arc section.
+     */
     var from0to9ArcData = [];
     from0to9.forEach(function (digit, i) {
         var arcDataObj = {
@@ -73,14 +87,23 @@
     });
 
 
+    /*
+     Create an SVG element
+     */
     var svg = d3.select("body").append("svg")
             .attr("width", width)
             .attr("height", height)
             .append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");  // set to the center
 
+    /*
+     Create the fill color for each section
+     */
     var fillPerDigit = d3.scale.category10().domain(d3.range(0, 10));
 
+    /*
+     Create the background symbol at first
+     */
     var bgSymbol = svg.append("text")
             .attr("id", "bgSymbol")
             .style("font-size", Math.min(width, height) * 0.5)
@@ -89,22 +112,33 @@
     bgSymbol.attr("dx", -bgSymbolSize[0] / 2.0);
     bgSymbol.attr("dy", bgSymbolSize[1] / 4.0);
 
+    /*
+     Make a d3.js arc object to use it for drawing the sections.
+     */
     var arc = d3.svg.arc()
             .innerRadius(innerRadius)
             .outerRadius(outerRadius);
 
+    /*
+     Create all section groups using the arc data
+     */
     var section = svg.append("g").selectAll(".section")
             .data(from0to9ArcData)
             .enter().append("g")
             .attr("class", "section");
 
+    /*
+     Create all section paths inside the section groups using the d3.js arc object
+     */
     var sectionPath = section.append("path")
             .attr("id", function(d, i) { return "section" + i; })
-            .attr("d", arc)
-            .attr("centroid", arc.centroid)
-            .style("fill", function(d, i) { return fillPerDigit(i); })
-            .style("stroke", function(d, i) { return fillPerDigit(i); });
+            .attr("d", arc)                    // this sets the geometry information
+            .style("fill", function(d, i) { return fillPerDigit(i); })     // fill and stroke ...
+            .style("stroke", function(d, i) { return fillPerDigit(i); });  // ... get the same color
 
+    /*
+     Set the digit texts inside the section groups
+     */
     var sectionText = section.append("text")
             .attr("x", 90)
             .attr("dy", 22);
@@ -113,55 +147,77 @@
             .text(function(d) { return d.value; });
 
 
-
+    /*
+     Load the digits from a text file
+     */
     d3.text('pi.txt', function (content) {
         var dotIdx = content.indexOf('.') + 1;
-        var fromDot = content.substr(dotIdx);
-        var digits = fromDot.replace(/[\D]/g, '');
+        var fromDot = content.substr(dotIdx);       // only use the decimal places
+        var digits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
 
+        // start the drawing animation
         drawDigits(digits.substr(0, numDigitsToDraw));
     });
 
+    /**
+     * Starts the drawing animation for <digits>.
+     */
     function drawDigits(digits) {
+        // calculate a histogram for the digits string
+        // we need this in order to know how many connection lines will be drawn per digit section
+        // so that we have the right spacing between the line starting/ending points
         var hist = histForDigits(digits);
-
+        
+        // create a group for the connection lines
         var connectionGroup = svg.append("g").attr("class", "connection");
         var grads = svg.selectAll("linearGradient");
 
+        // base line function
         var line = d3.svg.line()
                 .x(function (d) { return d[0] })
                 .y(function (d) { return d[1] })
                 .interpolate("basis");
 
+        // a loop that goes through the digits
         var prevPoint = null;
         var prevDgt = null;
         var prevAnimMs = 0;
-        var drawn = new Array(10).fill(0);
+        var drawn = new Array(10).fill(0);  // saves how many connection lines per digit have already be drawn
         var numAddedLines = 0;
         for (var i = 0; i < digits.length; i++) {
             var dgt = digits.charAt(i);
             var dgtInt = parseInt(dgt);
-
+            
+            // get amount of how often this digit appears in the digits string
             var numOfThisDigit = hist[dgtInt];  // *must* be > 0
 
+            // get the arc data that belongs to this digit
             var arcObj = from0to9ArcData[dgtInt];
-            //console.log(arcObj);
+            
+            // calculate the angle at which the connection line starts
+            
+            // this is the starting angle of the section
             var angStart = arcObj.startAngle - secCircum * 2.0 - secCircum / 2.0;  // don't know why we have to substract two sections
+            // the angle that is added per connection line of this digit
             var angSec = secCircum / (numOfThisDigit + 1);
+            
+            // the actual starting angle of this line
             var ang = angStart + (drawn[dgtInt] + 1) * angSec;
 
+            // the starting point of this line
             var thisPoint = [
                 innerRadius * Math.cos(ang),
                 innerRadius * Math.sin(ang)
             ];
 
+            // the "tipping" point around the center
             var middlePoint = [
                 middlePointRadius * Math.cos(ang),
                 middlePointRadius * Math.sin(ang)
             ];
 
-            if (prevPoint != null) {
-                // add gradient
+            if (prevPoint != null) {  // if this wasn't the very first line...
+                // add gradient for the connection line between the two end points
                 var gradId = "line-grad-" + prevDgt + "-" + dgt;
 
                 if (svg.select(gradId).node() == null) {
@@ -180,14 +236,17 @@
                 }
 
                 // add connection line
+                // the animation duration slowly gets shorter, to make the animation run faster with time
                 var animMs = animMaxMs * (1 - (1 + Math.log((numAddedLines + 1) / (digits.length - 1)) / (Math.E * Math.E)));
+                
+                // finally add the line path element
                 var connectionLine = connectionGroup.append("path")
-                        .attr("d", line([prevPoint, middlePoint, thisPoint]))
-                        .style("stroke", function(d) { return "url(#" + gradId })
+                        .attr("d", line([prevPoint, middlePoint, thisPoint]))       // set the line geometry
+                        .style("stroke", function(d) { return "url(#" + gradId })   // set the gradient to use
                         .style("stroke-opacity", 0.0)
-                        .transition()
+                        .transition()       // make the animation
                         .duration(animMs)
-                        .delay(prevAnimMs)
+                        .delay(prevAnimMs)  // only start after the previous line animation is finished
                         .style("stroke-opacity", 0.75);
 
                 prevAnimMs = prevAnimMs + animMs;
@@ -200,6 +259,9 @@
         }
     }
 
+    /**
+     * Calculates a histogram (with bins 0-9) for a string of <digits>.
+     */
     function histForDigits(digits) {
         // init
         var hist = new Array(10).fill(0);
