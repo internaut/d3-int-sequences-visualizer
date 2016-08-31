@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+<head>
+<title>Circular decimal places with d3.js</title>
 <style>
 	body {
 		font: 10px sans-serif;
@@ -33,8 +35,22 @@
         font-style: italic;
     }
 </style>
-<body>
+
 <script src="d3.js" charset="utf-8"></script>
+
+</head>
+<body>
+
+<div id="canvas">
+
+</div>
+
+<div id="options">
+    <label for="line_interpolation">Line Interpolation</label>
+    <select id="line_interpolation" name="line_interpolation">
+
+    </select>
+</div>
 
 <script>
     /**
@@ -59,6 +75,32 @@
 
     var animMaxMs = 500;
     var numDigitsToDraw = 100;
+    
+    var digits = null;
+    
+    /*
+     Set up options
+     */
+    
+    var interpolateOptions = [
+        'basis',
+        'linear',
+        'step',
+        'bundle',
+        'cardinal',
+        'monotone',
+    ];
+    
+    var selectedInterpolateOption = interpolateOptions[0];
+    
+    d3.select('#line_interpolation')
+        .on('change', function(opt) { selectedInterpolateOption = this.value; drawDigits(); })
+        .selectAll('option')
+        .data(interpolateOptions)
+        .enter().append('option')
+        .attr('value', function (d) { return d; })
+        .text(function (d) { return d; });
+    
 
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
     
@@ -90,7 +132,7 @@
     /*
      Create an SVG element
      */
-    var svg = d3.select("body").append("svg")
+    var svg = d3.select("#canvas").append("svg")
             .attr("width", width)
             .attr("height", height)
             .append("g")
@@ -153,30 +195,40 @@
     d3.text('pi.txt', function (content) {
         var dotIdx = content.indexOf('.') + 1;
         var fromDot = content.substr(dotIdx);       // only use the decimal places
-        var digits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
+        
+        var allDigits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
+        digits = allDigits.substr(0, numDigitsToDraw)
 
         // start the drawing animation
-        drawDigits(digits.substr(0, numDigitsToDraw));
+        drawDigits();
     });
 
     /**
-     * Starts the drawing animation for <digits>.
+     * Starts the drawing animation for the digits.
      */
-    function drawDigits(digits) {
+    function drawDigits() {
+        // create or select a group for the connection lines
+        var connectionGroup = svg.select("g.connection");
+        if (connectionGroup.empty()) {
+            connectionGroup = svg.append("g").attr("class", "connection");
+        } else {    
+            connectionGroup.interrupt() // cancel the current transition
+                           .transition(); // preempt any scheduled transitions
+            connectionGroup.selectAll("path").remove();
+        }
+    
         // calculate a histogram for the digits string
         // we need this in order to know how many connection lines will be drawn per digit section
         // so that we have the right spacing between the line starting/ending points
         var hist = histForDigits(digits);
         
-        // create a group for the connection lines
-        var connectionGroup = svg.append("g").attr("class", "connection");
         var grads = svg.selectAll("linearGradient");
 
         // base line function
         var line = d3.svg.line()
                 .x(function (d) { return d[0] })
                 .y(function (d) { return d[1] })
-                .interpolate("basis");
+                .interpolate(selectedInterpolateOption);
 
         // a loop that goes through the digits
         var prevPoint = null;
