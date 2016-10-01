@@ -46,6 +46,10 @@
 </div>
 
 <div id="options">
+    <label for="constant_from_file">Choose a constant</label>
+    <select id="constant_from_file" name="constant_from_file">
+
+    </select>
     <label for="line_interpolation">Line Interpolation</label>
     <select id="line_interpolation" name="line_interpolation">
 
@@ -55,7 +59,6 @@
 <script>
     /**
      * TODOs:
-     * - make constant selectable: pi, euler, etc.
      * - allow to enter own constant
      * - number of digits to draw
      * - adjust transparency
@@ -77,9 +80,18 @@
     
     var digits = null;
     
+    var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
+    
     /*
-     Set up options
+     Defne options
      */
+    
+    var constantsOptions = [
+        ['π', 'pi.txt'],
+        ['e', 'e.txt'],
+        ['√2', 'sqrt2.txt'],
+        ['ɸ (golden ratio)', 'phi.txt'],
+    ];
     
     var interpolateOptions = [
         'basis',
@@ -90,6 +102,36 @@
         'monotone',
     ];
     
+    
+    /*
+     Set up options
+     */
+     
+    var selectedConstantsOption = constantsOptions[0];
+    
+    function loadConstantFromFileAndDraw(f) {
+        console.log("will constant from load file '" + f + "'");
+        d3.text(f, function (content) {
+            var dotIdx = content.indexOf('.') + 1;
+            var fromDot = content.substr(dotIdx);       // only use the decimal places
+        
+            var allDigits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
+            digits = allDigits.substr(0, numDigitsToDraw);
+            
+            console.log("starting draw animation");
+            drawDigits();
+        });
+    }
+    
+    d3.select('#constant_from_file')
+        .on('change', function(opt) { loadConstantFromFileAndDraw(this.value); } )
+        .selectAll('option')
+        .data(constantsOptions)
+        .enter().append('option')
+        .attr('value', function (d) { return d[1]; })
+        .text(function (d) { return d[0]; });
+
+
     var selectedInterpolateOption = interpolateOptions[0];
     
     d3.select('#line_interpolation')
@@ -99,9 +141,6 @@
         .enter().append('option')
         .attr('value', function (d) { return d; })
         .text(function (d) { return d; });
-    
-
-    var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
     
     /*
      Define the digits for the arc as array
@@ -186,21 +225,6 @@
     sectionText.append("textPath")
             .attr("xlink:href", function(d, i) { return "#section" + i; })
             .text(function(d) { return d.value; });
-
-
-    /*
-     Load the digits from a text file
-     */
-    d3.text('pi.txt', function (content) {
-        var dotIdx = content.indexOf('.') + 1;
-        var fromDot = content.substr(dotIdx);       // only use the decimal places
-        
-        var allDigits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
-        digits = allDigits.substr(0, numDigitsToDraw)
-
-        // start the drawing animation
-        drawDigits();
-    });
 
     /**
      * Starts the drawing animation for the digits.
@@ -325,6 +349,11 @@
 
         return hist;
     }
+    
+    /**
+     * Load the default constants file and start the draw animation
+     */
+    loadConstantFromFileAndDraw(selectedConstantsOption[1]);
 </script>
 
 </body>
