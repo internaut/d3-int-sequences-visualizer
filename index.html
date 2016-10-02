@@ -87,7 +87,9 @@
     var maxDigit = null;    // max of <digits>
     var numSecs = null;     // max - min + 1
     
-    var secCircum = null;   // section circumference (PI * 2 / numSecs)
+    var fillPerDigit = null;
+    var secCircum = null;   // section circumference
+    var arcData = null;
     
     /*
      Defne options
@@ -116,8 +118,31 @@
      Set up options
      */
      
-    var selectedConstantsOption = constantsOptions[0];
+    var selectedConstantsOption = constantsOptions[4];
+        
+    d3.select('#constant_from_file')
+        .on('change', function(opt) { loadDigitsAndDraw(this.value); } )
+        .selectAll('option')
+        .data(constantsOptions)
+        .enter().append('option')
+        .attr('value', function (d) { return d[1]; })
+        .text(function (d) { return d[0]; });
+
+
+    var selectedInterpolateOption = interpolateOptions[0];
     
+    d3.select('#line_interpolation')
+        .on('change', function(opt) { selectedInterpolateOption = this.value; drawDigits(); })
+        .selectAll('option')
+        .data(interpolateOptions)
+        .enter().append('option')
+        .attr('value', function (d) { return d; })
+        .text(function (d) { return d; });
+    
+    
+    /*
+     Functions for loading and parsing
+     */
     function parseTxtFile(content) {
         var dotIdx = content.indexOf('.') + 1;
         var fromDot = content.substr(dotIdx);       // only use the decimal places
@@ -160,56 +185,15 @@
             maxDigit = Math.max.apply(Math, digits);
             
             numSecs = maxDigit - minDigit + 1;
-            secCircum = Math.deg((Math.PI * 2.0) / numSecs);
+            secCircum = Math.PI * (2.0 / numSecs);
+            
+            // create circular sections
+            setupSections();
             
             console.log("starting draw animation");
             drawDigits();
         });
-    }
-    
-    d3.select('#constant_from_file')
-        .on('change', function(opt) { loadDigitsAndDraw(this.value); } )
-        .selectAll('option')
-        .data(constantsOptions)
-        .enter().append('option')
-        .attr('value', function (d) { return d[1]; })
-        .text(function (d) { return d[0]; });
-
-
-    var selectedInterpolateOption = interpolateOptions[0];
-    
-    d3.select('#line_interpolation')
-        .on('change', function(opt) { selectedInterpolateOption = this.value; drawDigits(); })
-        .selectAll('option')
-        .data(interpolateOptions)
-        .enter().append('option')
-        .attr('value', function (d) { return d; })
-        .text(function (d) { return d; });
-    
-    /*
-     Define the digits for the arc as array
-     */
-
-    var from0to9 = [];
-    for (var i = 0; i < 10; i++) {
-        from0to9.push(String(i));
-    }
-
-    /*
-     An arc data object consists of the index, value (the digit itself) and the start and end angle of the arc section.
-     */
-    var from0to9ArcData = [];
-    from0to9.forEach(function (digit, i) {
-        var arcDataObj = {
-            index: i,
-            value: digit,
-            startAngle: secCircum * i,
-            endAngle: secCircum * (i + 1)
-        };
-
-        from0to9ArcData.push(arcDataObj);
-    });
-
+    }    
 
     /*
      Create an SVG element
@@ -221,54 +205,76 @@
             .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");  // set to the center
 
     /*
-     Create the fill color for each section
-     */
-    var fillPerDigit = d3.scale.category10().domain(d3.range(0, 10));
-
-    /*
      Create the background symbol at first
      */
-    var bgSymbol = svg.append("text")
+    /*var bgSymbol = svg.append("text")
             .attr("id", "bgSymbol")
             .style("font-size", Math.min(width, height) * 0.5)
             .text("π");
     var bgSymbolSize = [bgSymbol.node().clientWidth, bgSymbol.node().clientHeight];
     bgSymbol.attr("dx", -bgSymbolSize[0] / 2.0);
-    bgSymbol.attr("dy", bgSymbolSize[1] / 4.0);
+    bgSymbol.attr("dy", bgSymbolSize[1] / 4.0);*/
 
-    /*
-     Make a d3.js arc object to use it for drawing the sections.
-     */
-    var arc = d3.svg.arc()
-            .innerRadius(innerRadius)
-            .outerRadius(outerRadius);
 
-    /*
-     Create all section groups using the arc data
-     */
-    var section = svg.append("g").selectAll(".section")
-            .data(from0to9ArcData)
-            .enter().append("g")
-            .attr("class", "section");
+    function createArcData() {
+        /*
+         An arc data object consists of the index, value (the digit itself) and the start and end angle of the arc section.
+         */
+        arcData = [];
+        for (var dgt = minDigit; dgt <= maxDigit; dgt++) {
+            var arcDataObj = {
+                index: dgt,
+                value: String(dgt),
+                startAngle: secCircum * dgt,
+                endAngle: secCircum * (dgt + 1)
+            };
 
-    /*
-     Create all section paths inside the section groups using the d3.js arc object
-     */
-    var sectionPath = section.append("path")
-            .attr("id", function(d, i) { return "section" + i; })
-            .attr("d", arc)                    // this sets the geometry information
-            .style("fill", function(d, i) { return fillPerDigit(i); })     // fill and stroke ...
-            .style("stroke", function(d, i) { return fillPerDigit(i); });  // ... get the same color
+            arcData.push(arcDataObj);
+        }
+    }
+    
+    function setupSections() {
+        createArcData();
+        
+        /*
+         Make a d3.js arc object to use it for drawing the sections.
+         */
+        var arc = d3.svg.arc()
+                .innerRadius(innerRadius)
+                .outerRadius(outerRadius);
 
-    /*
-     Set the digit texts inside the section groups
-     */
-    var sectionText = section.append("text")
-            .attr("x", 90)
-            .attr("dy", 22);
-    sectionText.append("textPath")
-            .attr("xlink:href", function(d, i) { return "#section" + i; })
-            .text(function(d) { return d.value; });
+        /*
+         Create all section groups using the arc data
+         */
+        var section = svg.append("g").selectAll(".section")
+                .data(arcData)
+                .enter().append("g")
+                .attr("class", "section");
+
+        /*
+         Create the fill color for each section
+         */
+        fillPerDigit = d3.scale.category20().domain(d3.range(minDigit, maxDigit));
+
+        /*
+         Create all section paths inside the section groups using the d3.js arc object
+         */
+        var sectionPath = section.append("path")
+                .attr("id", function(d, i) { return "section" + i; })
+                .attr("d", arc)                    // this sets the geometry information
+                .style("fill", function(d, i) { return fillPerDigit(i); })     // fill and stroke ...
+                .style("stroke", function(d, i) { return fillPerDigit(i); });  // ... get the same color
+
+        /*
+         Set the digit texts inside the section groups
+         */
+        var sectionText = section.append("text")
+                .attr("x", 4)
+                .attr("dy", 22);
+        sectionText.append("textPath")
+                .attr("xlink:href", function(d, i) { return "#section" + i; })
+                .text(function(d) { return d.value; });
+    }
 
     /**
      * Starts the drawing animation for the digits.
@@ -301,27 +307,28 @@
         var prevPoint = null;
         var prevDgt = null;
         var prevAnimMs = 0;
-        var drawn = new Array(10).fill(0);  // saves how many connection lines per digit have already be drawn
+        var drawn = new Array(numSecs).fill(0);  // saves how many connection lines per digit have already be drawn
         var numAddedLines = 0;
         for (var i = 0; i < digits.length; i++) {
             var dgtInt = digits[i];
             var dgt = String(dgtInt);
+            var dgtArrIdx = dgtInt - minDigit;   // index into 0-index-based arrays like hist
             
             // get amount of how often this digit appears in the digits string
-            var numOfThisDigit = hist[dgtInt];  // *must* be > 0
+            var numOfThisDigit = hist[dgtArrIdx];  // *must* be > 0
 
             // get the arc data that belongs to this digit
-            var arcObj = from0to9ArcData[dgtInt];
+            var arcObj = arcData[dgtInt];
             
             // calculate the angle at which the connection line starts
             
             // this is the starting angle of the section
-            var angStart = arcObj.startAngle - secCircum * 2.0 - secCircum / 2.0;  // don't know why we have to substract two sections
+            var angStart = arcObj.startAngle - Math.PI / 2;
             // the angle that is added per connection line of this digit
             var angSec = secCircum / (numOfThisDigit + 1);
             
             // the actual starting angle of this line
-            var ang = angStart + (drawn[dgtInt] + 1) * angSec;
+            var ang = angStart + (drawn[dgtArrIdx] + 1) * angSec;
 
             // the starting point of this line
             var thisPoint = [
@@ -372,22 +379,22 @@
                 numAddedLines++;
             }
 
-            drawn[dgtInt]++;
+            drawn[dgtArrIdx]++;
             prevPoint = thisPoint;
             prevDgt = dgt;
         }
     }
 
     /**
-     * Calculates a histogram (with bins 0-9) for a string of <digits>.
+     * Calculates a histogram for an array of <digits>.
      */
     function histForDigits(digits) {
         // init
-        var hist = new Array(10).fill(0);
+        var hist = new Array(numSecs).fill(0);
 
         // count
         for (var i = 0; i < digits.length; i++) {
-            hist[digits[i]]++;
+            hist[digits[i] - minDigit]++;
         }
 
         return hist;
