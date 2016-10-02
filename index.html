@@ -85,8 +85,9 @@
     
     var minDigit = null;    // min of <digits>
     var maxDigit = null;    // max of <digits>
+    var numSecs = null;     // max - min + 1
     
-    var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
+    var secCircum = null;   // section circumference (PI * 2 / numSecs)
     
     /*
      Defne options
@@ -157,6 +158,9 @@
             digits = allDigits.slice(0, numDigitsToDraw);
             minDigit = Math.min.apply(Math, digits);
             maxDigit = Math.max.apply(Math, digits);
+            
+            numSecs = maxDigit - minDigit + 1;
+            secCircum = Math.deg((Math.PI * 2.0) / numSecs);
             
             console.log("starting draw animation");
             drawDigits();
