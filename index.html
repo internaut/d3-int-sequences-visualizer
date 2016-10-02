@@ -59,6 +59,8 @@
 <script>
     /**
      * TODOs:
+     * - allow fetch number from OEIS, e.g. http://oeis.org/A002262/b002262.txt
+     *   -> dyn. number of segments
      * - allow to enter own constant
      * - number of digits to draw
      * - adjust transparency
@@ -78,7 +80,11 @@
     var animMaxMs = 500;
     var numDigitsToDraw = 100;
     
-    var digits = null;
+    var digits = null;      // array of ints. only the digits to draw
+    var allDigits = null;   // array of ints. all loaded digits
+    
+    var minDigit = null;    // min of <digits>
+    var maxDigit = null;    // max of <digits>
     
     var secCircum = Math.PI * .2;   // circumference of a section for a digit (full circle divided by 10)
     
@@ -91,6 +97,8 @@
         ['e', 'e.txt'],
         ['√2', 'sqrt2.txt'],
         ['ɸ (golden ratio)', 'phi.txt'],
+        ['OEIS A002262', 'b002262.txt'],
+        ['OEIS A025581', 'b025581.txt'],
     ];
     
     var interpolateOptions = [
@@ -109,14 +117,46 @@
      
     var selectedConstantsOption = constantsOptions[0];
     
-    function loadConstantFromFileAndDraw(f) {
+    function parseTxtFile(content) {
+        var dotIdx = content.indexOf('.') + 1;
+        var fromDot = content.substr(dotIdx);       // only use the decimal places
+        
+        var digitsStr = fromDot.replace(/[\D]/g, '');  // delete everything but digits
+        
+        var digitsArr = [];
+        for (i = 0; i < digitsStr.length; i++) {
+            digitsArr.push(parseInt(digitsStr.charAt(i)));
+        }
+        
+        return digitsArr;
+    }
+    
+    function parseOEISFile(content) {
+        var lines = content.match(/^.*([\n\r]+|$)/gm);
+        var digitsArr = [];
+        for (var i = 0; i < lines.length; i++) {
+            var l = lines[i];
+            var parts = l.split(' ');
+            if (parts.length == 2) {
+                digitsArr.push(parseInt(parts[1]));
+            }
+        }
+        
+        return digitsArr;
+    }
+    
+    function loadDigitsAndDraw(f) {
         console.log("will constant from load file '" + f + "'");
         d3.text(f, function (content) {
-            var dotIdx = content.indexOf('.') + 1;
-            var fromDot = content.substr(dotIdx);       // only use the decimal places
-        
-            var allDigits = fromDot.replace(/[\D]/g, '');  // delete everything but digits
-            digits = allDigits.substr(0, numDigitsToDraw);
+            if (f[0] == 'b') {
+                allDigits = parseOEISFile(content);
+            } else {
+                allDigits = parseTxtFile(content);            
+            }
+
+            digits = allDigits.slice(0, numDigitsToDraw);
+            minDigit = Math.min.apply(Math, digits);
+            maxDigit = Math.max.apply(Math, digits);
             
             console.log("starting draw animation");
             drawDigits();
@@ -124,7 +164,7 @@
     }
     
     d3.select('#constant_from_file')
-        .on('change', function(opt) { loadConstantFromFileAndDraw(this.value); } )
+        .on('change', function(opt) { loadDigitsAndDraw(this.value); } )
         .selectAll('option')
         .data(constantsOptions)
         .enter().append('option')
@@ -260,8 +300,8 @@
         var drawn = new Array(10).fill(0);  // saves how many connection lines per digit have already be drawn
         var numAddedLines = 0;
         for (var i = 0; i < digits.length; i++) {
-            var dgt = digits.charAt(i);
-            var dgtInt = parseInt(dgt);
+            var dgtInt = digits[i];
+            var dgt = String(dgtInt);
             
             // get amount of how often this digit appears in the digits string
             var numOfThisDigit = hist[dgtInt];  // *must* be > 0
@@ -343,8 +383,7 @@
 
         // count
         for (var i = 0; i < digits.length; i++) {
-            var dgt = digits.charAt(i);
-            hist[parseInt(dgt)]++;
+            hist[digits[i]]++;
         }
 
         return hist;
@@ -353,7 +392,7 @@
     /**
      * Load the default constants file and start the draw animation
      */
-    loadConstantFromFileAndDraw(selectedConstantsOption[1]);
+    loadDigitsAndDraw(selectedConstantsOption[1]);
 </script>
 
 </body>
