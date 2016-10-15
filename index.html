@@ -70,8 +70,10 @@
 <script>
     /**
      * TODOs:
-     * - how to handle big number of sections?
      * - number of digits to draw
+     * - title
+     * - center display
+     * - documentation
      * - nicer CSS
      * - export to PDF
      */
@@ -113,6 +115,7 @@
         ['OEIS A001113 (decimal expansion of e)', OEIS_BASE_URL + 'A001113/b001113.txt'],
         ['OEIS A002193 (decimal expansion of √2)', OEIS_BASE_URL + 'A002193/b002193.txt'],
         ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', OEIS_BASE_URL + 'A001622/b001622.txt'],
+        ['OEIS A000188', OEIS_BASE_URL + 'A000188/b000188.txt'],
         ['other ...', '_']
     ];
     
@@ -278,15 +281,19 @@
          An arc data object consists of the index, value (the digit itself) and the start and end angle of the arc section.
          */
         arcData = [];
+        var index = 0;
         for (var dgt = minDigit; dgt <= maxDigit; dgt++) {
             var arcDataObj = {
-                index: dgt,
+                index: index,
+                digit: dgt,
                 value: String(dgt),
-                startAngle: secCircum * dgt,
-                endAngle: secCircum * (dgt + 1)
+                startAngle: secCircum * index,
+                endAngle: secCircum * (index + 1)
             };
 
             arcData.push(arcDataObj);
+            
+            index++;
         }
     }
     
@@ -366,7 +373,7 @@
 
         // a loop that goes through the digits
         var prevPoint = null;
-        var prevDgt = null;
+        var prevSectionIndex = null;
         var prevAnimMs = 0;
         var drawn = new Array(numSecs).fill(0);  // saves how many connection lines per digit have already be drawn
         var numAddedLines = 0;
@@ -379,7 +386,8 @@
             var numOfThisDigit = hist[dgtArrIdx];  // *must* be > 0
 
             // get the arc data that belongs to this digit
-            var arcObj = arcData[dgtInt];
+            var arcObj = arcData[dgtArrIdx];
+            var sectionIndex = String(arcObj.index);
             
             // calculate the angle at which the connection line starts
             
@@ -405,7 +413,7 @@
 
             if (prevPoint != null) {  // if this wasn't the very first line...
                 // add gradient for the connection line between the two end points
-                var gradId = "line-grad-" + prevDgt + "-" + dgt;
+                var gradId = "line-grad-" + prevSectionIndex + "-" + sectionIndex;
 
                 if (svg.select(gradId).node() == null) {
                     svg.append("linearGradient")
@@ -414,7 +422,7 @@
                             .attr("x1", prevPoint[0]).attr("y1", prevPoint[1])
                             .attr("x2", thisPoint[0]).attr("y2", thisPoint[1])
                             .selectAll("stop")
-                            .data(function (d) { return [prevDgt, dgt]})
+                            .data(function (d) { return [prevSectionIndex, sectionIndex]})
                             .enter().append("stop")
                             .attr("offset", function(_, i) { return i * 100 + "%"; })
                             .attr("stop-color", function(d) {
@@ -442,7 +450,7 @@
 
             drawn[dgtArrIdx]++;
             prevPoint = thisPoint;
-            prevDgt = dgt;
+            prevSectionIndex = sectionIndex;
         }
     }
 
