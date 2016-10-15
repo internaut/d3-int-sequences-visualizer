@@ -26,8 +26,13 @@
         fill: none;
     }
     
-    .other_sequence_fields {
+    .other_sequence_fields,
+    .n_digits_manual {
         display: none;
+    }
+    
+    input.small {
+        width: 7em;
     }
     
     #errors {
@@ -49,38 +54,64 @@
 </div>
 
 <div id="options">
-    <label for="constant_from_file">Choose an integer sequence</label>
-    <select id="constant_from_file" name="constant_from_file">
-
-    </select>
-    <label for="line_interpolation">Line Interpolation</label>
-    <select id="line_interpolation" name="line_interpolation">
-
-    </select>
+    <fieldset>
+        <legend>Integer sequence</legend>
+        <label for="constant_from_file">Choose an integer sequence</label>
+        <select id="constant_from_file" name="constant_from_file"></select>
+        <br>
     
-    <br>
-    
-    <div class="other_sequence_fields">
-        <label for="other_sequence">Load this OEIS Number</label>
-        <input id="other_sequence" type="text" value="A...">
-        <input id="other_sequence_btn" type="button" value="OK">
-    </div>
+        <div class="other_sequence_fields">
+            <label for="other_sequence">Load this OEIS Number</label>
+            <input id="other_sequence" type="text" value="A...">
+            <input id="other_sequence_btn" type="button" value="OK">
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Animation options</legend>
+        <label for="anim_type">Animation type</label>
+        <select id="anim_type" name="anim_type">
+            <option value="automatic">automatic</option>
+            <option value="manual">manual</option>
+        </select>
+        
+        <br>
+        
+        <div class="n_digits_automatic">
+            <label for="n_digits">Number of digits to draw</label>
+            <input id="n_digits" type="range" min="2" max="" value="" oninput="n_digits_disp.value = n_digits.value">
+            <output name="n_digits_disp" id="n_digits_disp"></output>
+        </div>
+        
+        <div class="n_digits_manual">
+            <label for="anim_frame">Set animation frame</label>
+            <input id="anim_frame" type="range" min="2" max="" value="" oninput="anim_frame.value = anim_frame_disp.value">
+            <output name="anim_frame_disp" id="anim_frame_disp"></output>
+        </div>
+    </fieldset>        
+    <fieldset>
+        <legend>Drawing options</legend>
+        <label for="line_interpolation">Line Interpolation</label>
+        <select id="line_interpolation" name="line_interpolation"></select>
+    </fieldset>
 </div>
 
 <script>
     /**
      * TODOs:
-     * - number of digits to draw
+     * - manually control animation
      * - title
      * - center display
      * - documentation
      * - nicer CSS
+     * - test with FF
      * - export to PDF
      */
 
     /*
      Define some constants
      */
+     
+    var OEIS_BASE_URL = 'https://oeis.org/';
      
     var width = 700,
         height = 700,
@@ -89,7 +120,10 @@
         middlePointRadius = innerRadius * 0.5;
 
     var animMaxMs = 500;
-    var numDigitsToDraw = 100;
+    var animFrame = null;
+    var numDigitsToDrawDefault = 100;
+    var numDigitsToDraw = null;
+    var numDigitsMax = 1000;
     
     var digits = null;      // array of ints. only the digits to draw
     var allDigits = null;   // array of ints. all loaded digits
@@ -102,7 +136,15 @@
     var secCircum = null;   // section circumference
     var arcData = null;
     
-    var OEIS_BASE_URL = 'https://oeis.org/';
+    
+    /*
+     Create the root SVG element
+     */
+    var svg = d3.select("#canvas").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");  // set to the center
     
     /*
      Defne options
@@ -177,9 +219,45 @@
         .text(function (d) { return d; });
     
     
+    d3.select('#anim_type').on('change', function() {
+        var hide;
+        if (this.value == 'automatic') {
+            hide = 'manual';
+        } else {
+            hide = 'automatic';
+        }
+        
+        d3.select('.n_digits_' + this.value).style("display", "block");
+        d3.select('.n_digits_' + hide).style("display", "none");
+    });
+    
+        
+    d3.select('#n_digits').on('change', function() {
+        numDigitsToDraw = this.value;
+
+        initDigitsToDraw();
+        
+        redraw();
+    });
+    
+    function resetOptions() {
+        if (allDigits !== null) {
+            numDigitsToDraw = Math.min(allDigits.length, numDigitsToDrawDefault);
+        } else {
+            numDigitsToDraw = numDigitsToDrawDefault;
+        }
+    
+        setRangeInputValue('n_digits', numDigitsToDraw);
+        
+        animFrame = 1;
+        setRangeInputValue('anim_frame', animFrame);
+    }
+        
+    
     /*
-     Functions for loading and parsing
+     Misc. Functions
      */
+    
     function showError(msg) {
         d3.select('#errors').text(msg);
         console.error(msg);
@@ -188,6 +266,15 @@
     function resetErrors(msg) {
         d3.select('#errors').text('');  
     }
+    
+    function setRangeInputValue(input, v) {
+        d3.select('#' + input).property('value', v);
+        d3.select('#' + input + '_disp').property('value', v);
+    }
+    
+    /*
+     Functions for loading and parsing
+     */
      
     function parseTxtFile(content) {
         var dotIdx = content.indexOf('.') + 1;
@@ -213,6 +300,8 @@
             var parts = l.split(' ');
             if (parts.length == 2) {
                 digitsArr.push(parseInt(parts[1]));
+                
+                if (digitsArr.length >= numDigitsMax) break;
             }
         }
         
@@ -238,13 +327,27 @@
             } else {
                 handleContentFromFile(data);
             }
-        });
-        
+        });   
     }
     
     function handleContentFromFile(content) {
         allDigits = parseOEISFile(content);
-
+        
+        d3.select('#n_digits').property('max', allDigits.length);
+        d3.select('#anim_frame').property('max', allDigits.length);
+        
+        resetOptions();
+        
+        initDigitsToDraw();
+        
+        redraw();
+    }
+    
+    /*
+     Functions for drawing and animation
+     */
+    
+    function initDigitsToDraw() {
         digits = allDigits.slice(0, numDigitsToDraw);
         minDigit = Math.min.apply(Math, digits);
         maxDigit = Math.max.apply(Math, digits);
@@ -255,25 +358,16 @@
             showError('range of digits too big (' + numSecs + ') -- you should load a sequence with a smaller range');
             return;
         }
-        
-        secCircum = Math.PI * (2.0 / numSecs);
-        
+    }
+    
+    function redraw() {
         // create circular sections
         setupSections();
         
         console.log("starting draw animation");
         resetErrors();
         drawDigits();
-    }    
-
-    /*
-     Create an SVG element
-     */
-    var svg = d3.select("#canvas").append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");  // set to the center
+    }
 
 
     function createArcData() {
@@ -298,8 +392,12 @@
     }
     
     function setupSections() {
-        createArcData();
+        // set section circum
+        secCircum = Math.PI * (2.0 / numSecs);
         
+        // create section (arc) data
+        createArcData();
+
         /*
          Make a d3.js arc object to use it for drawing the sections.
          */
@@ -336,7 +434,7 @@
         var sectionText = section.append("text")
                 .attr("x", 4)
                 .attr("dy", 22)
-                .style("font-size", Math.max((10.0 / numSecs) * 22.0, 6.0));
+                .style("font-size", Math.min(Math.max((10.0 / numSecs) * 22.0, 6.0), 22.0));
         
         sectionText.append("textPath")
                 .attr("xlink:href", function(d, i) { return "#section" + i; })
