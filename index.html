@@ -96,12 +96,12 @@
      */
     
     var constantsOptions = [
-        ['π', 'pi.txt'],
-        ['e', 'e.txt'],
-        ['√2', 'sqrt2.txt'],
-        ['ɸ (golden ratio)', 'phi.txt'],
-        ['OEIS A002262', 'b002262.txt'],
-        ['OEIS A025581', 'b025581.txt'],
+        ['OEIS A002262', 'https://oeis.org/A002262/b002262.txt'],
+        ['OEIS A025581', 'https://oeis.org/A025581/b025581.txt'],
+        ['OEIS A000796 (decimal expansion of π)', 'https://oeis.org/A000796/b000796.txt'],
+        ['OEIS A001113 (decimal expansion of e)', 'https://oeis.org/A001113/b001113.txt'],
+        ['OEIS A002193 (decimal expansion of √2)', 'https://oeis.org/A002193/b002193.txt'],
+        ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', 'https://oeis.org/A001622/b001622.txt'],
     ];
     
     var interpolateOptions = [
@@ -171,28 +171,44 @@
         return digitsArr;
     }
     
-    function loadDigitsAndDraw(f) {
-        console.log("will constant from load file '" + f + "'");
-        d3.text(f, function (content) {
-            if (f[0] == 'b') {
-                allDigits = parseOEISFile(content);
+    function loadDigitsAndDraw(f) {        
+        var lastSlash = f.lastIndexOf('/') + 1;
+        var fLocal = '/digitlists/' + f.substr(lastSlash);
+        
+        console.log("will try to load digits from local file '" + fLocal + "'");
+        
+        d3.text(fLocal, function(error, data) {
+            if (error !== null) {
+                console.log("failed. will try to load digits from remote file '" + f + "'");
+                d3.text(f, function(error, data) {            
+                  if (error === null && data !== null) {
+                      handleContentFromFile(data);
+                  } else {
+                      console.error("could not load digits from file");
+                  }
+                });
             } else {
-                allDigits = parseTxtFile(content);            
+                handleContentFromFile(data);
             }
-
-            digits = allDigits.slice(0, numDigitsToDraw);
-            minDigit = Math.min.apply(Math, digits);
-            maxDigit = Math.max.apply(Math, digits);
-            
-            numSecs = maxDigit - minDigit + 1;
-            secCircum = Math.PI * (2.0 / numSecs);
-            
-            // create circular sections
-            setupSections();
-            
-            console.log("starting draw animation");
-            drawDigits();
         });
+        
+    }
+    
+    function handleContentFromFile(content) {
+        allDigits = parseOEISFile(content);
+
+        digits = allDigits.slice(0, numDigitsToDraw);
+        minDigit = Math.min.apply(Math, digits);
+        maxDigit = Math.max.apply(Math, digits);
+        
+        numSecs = maxDigit - minDigit + 1;
+        secCircum = Math.PI * (2.0 / numSecs);
+        
+        // create circular sections
+        setupSections();
+        
+        console.log("starting draw animation");
+        drawDigits();
     }    
 
     /*
