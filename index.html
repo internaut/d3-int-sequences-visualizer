@@ -118,7 +118,7 @@
      Set up options
      */
      
-    var selectedConstantsOption = constantsOptions[4];
+    var selectedConstantsOption = constantsOptions[0];
         
     d3.select('#constant_from_file')
         .on('change', function(opt) { loadDigitsAndDraw(this.value); } )
@@ -262,6 +262,7 @@
         /*
          Create all section groups using the arc data
          */
+        svg.selectAll(".section").remove();
         var section = svg.append("g").selectAll(".section")
                 .data(arcData)
                 .enter().append("g")
@@ -312,6 +313,7 @@
         var hist = histForDigits(digits);
         
         var grads = svg.selectAll("linearGradient");
+        grads.remove();
 
         // base line function
         var line = d3.svg.line()
