@@ -3,11 +3,11 @@
 <head>
 <title>Circular decimal places with d3.js</title>
 <style>
-	body {
-		font: 10px sans-serif;
-        background: black;
-        color: white;
-	}
+    body {
+      font: 10px sans-serif;
+          background: black;
+          color: white;
+    }
 
     svg {
         background: black;
@@ -34,6 +34,10 @@
         fill-opacity: 0.33;
         font-style: italic;
     }
+    
+    .other_sequence_fields {
+        display: none;
+    }
 </style>
 
 <script src="d3.js" charset="utf-8"></script>
@@ -46,7 +50,7 @@
 </div>
 
 <div id="options">
-    <label for="constant_from_file">Choose a constant</label>
+    <label for="constant_from_file">Choose an integer sequence</label>
     <select id="constant_from_file" name="constant_from_file">
 
     </select>
@@ -54,16 +58,21 @@
     <select id="line_interpolation" name="line_interpolation">
 
     </select>
+    
+    <br>
+    
+    <div class="other_sequence_fields">
+        <label for="other_sequence">Load this OEIS Number</label>
+        <input id="other_sequence" type="text" value="A...">
+        <input id="other_sequence_btn" type="button" value="OK">
+    </div>
 </div>
 
 <script>
     /**
      * TODOs:
-     * - allow fetch number from OEIS, e.g. http://oeis.org/A002262/b002262.txt
-     *   -> dyn. number of segments
-     * - allow to enter own constant
+     * - how to handle big number of sections?
      * - number of digits to draw
-     * - adjust transparency
      * - export to PDF
      */
 
@@ -91,17 +100,20 @@
     var secCircum = null;   // section circumference
     var arcData = null;
     
+    var OEIS_BASE_URL = 'https://oeis.org/';
+    
     /*
      Defne options
      */
     
     var constantsOptions = [
-        ['OEIS A002262', 'https://oeis.org/A002262/b002262.txt'],
-        ['OEIS A025581', 'https://oeis.org/A025581/b025581.txt'],
-        ['OEIS A000796 (decimal expansion of π)', 'https://oeis.org/A000796/b000796.txt'],
-        ['OEIS A001113 (decimal expansion of e)', 'https://oeis.org/A001113/b001113.txt'],
-        ['OEIS A002193 (decimal expansion of √2)', 'https://oeis.org/A002193/b002193.txt'],
-        ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', 'https://oeis.org/A001622/b001622.txt'],
+        ['OEIS A002262', OEIS_BASE_URL + 'A002262/b002262.txt'],
+        ['OEIS A025581', OEIS_BASE_URL + 'A025581/b025581.txt'],
+        ['OEIS A000796 (decimal expansion of π)', OEIS_BASE_URL + 'A000796/b000796.txt'],
+        ['OEIS A001113 (decimal expansion of e)', OEIS_BASE_URL + 'A001113/b001113.txt'],
+        ['OEIS A002193 (decimal expansion of √2)', OEIS_BASE_URL + 'A002193/b002193.txt'],
+        ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', OEIS_BASE_URL + 'A001622/b001622.txt'],
+        ['other ...', '_']
     ];
     
     var interpolateOptions = [
@@ -121,12 +133,34 @@
     var selectedConstantsOption = constantsOptions[0];
         
     d3.select('#constant_from_file')
-        .on('change', function(opt) { loadDigitsAndDraw(this.value); } )
+        .on('change', function(opt) {
+            var otherSeqFields = d3.select('.other_sequence_fields')
+            if (this.value == '_') {   // enter own OEIS number
+                otherSeqFields.style('display', 'block');
+            } else {
+                otherSeqFields.style('display', 'none');
+                loadDigitsAndDraw(this.value);
+            }
+        })
         .selectAll('option')
         .data(constantsOptions)
         .enter().append('option')
         .attr('value', function (d) { return d[1]; })
         .text(function (d) { return d[0]; });
+    
+    d3.select('#other_sequence_btn').on('click', function() {
+        var seqNumField = d3.select('#other_sequence');
+        var oeisNum = seqNumField.property('value');
+        console.log("other sequence:", oeisNum);
+        if (/A\d{6,8}/.test(oeisNum)) {
+           seqNumField.style("border", "inherit");
+           var bFileUrl = OEIS_BASE_URL + oeisNum + '/b' + oeisNum.substr(1)  + '.txt';
+           loadDigitsAndDraw(bFileUrl);
+        } else {
+           console.log('incorrect OEIS A-number format');
+           seqNumField.style("border", "1px solid red");
+        }
+    });
 
 
     var selectedInterpolateOption = interpolateOptions[0];
@@ -161,7 +195,9 @@
         var lines = content.match(/^.*([\n\r]+|$)/gm);
         var digitsArr = [];
         for (var i = 0; i < lines.length; i++) {
-            var l = lines[i];
+            var l = lines[i].trim();
+            if (l.length == 0 || l[0] == '#') continue;
+
             var parts = l.split(' ');
             if (parts.length == 2) {
                 digitsArr.push(parseInt(parts[1]));
