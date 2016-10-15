@@ -16,7 +16,7 @@
 
     .section text {
         font-size: 22px;
-        font-weight: bold;
+        /*font-weight: bold;*/
         fill: white;
     }
 
@@ -25,18 +25,14 @@
         stroke-width: 2;
         fill: none;
     }
-
-    #bgSymbol {
-        fill: white;
-        stroke: white;
-        stroke-opacity: 0.5;
-        stroke-width: 2;
-        fill-opacity: 0.33;
-        font-style: italic;
-    }
     
     .other_sequence_fields {
         display: none;
+    }
+    
+    #errors {
+        color: red;
+        margin: 2em 0 2em 0;
     }
 </style>
 
@@ -47,6 +43,9 @@
 
 <div id="canvas">
 
+</div>
+
+<div id="errors">
 </div>
 
 <div id="options">
@@ -73,6 +72,7 @@
      * TODOs:
      * - how to handle big number of sections?
      * - number of digits to draw
+     * - nicer CSS
      * - export to PDF
      */
 
@@ -177,6 +177,15 @@
     /*
      Functions for loading and parsing
      */
+    function showError(msg) {
+        d3.select('#errors').text(msg);
+        console.error(msg);
+    }
+    
+    function resetErrors(msg) {
+        d3.select('#errors').text('');  
+    }
+     
     function parseTxtFile(content) {
         var dotIdx = content.indexOf('.') + 1;
         var fromDot = content.substr(dotIdx);       // only use the decimal places
@@ -220,7 +229,7 @@
                   if (error === null && data !== null) {
                       handleContentFromFile(data);
                   } else {
-                      console.error("could not load digits from file");
+                      showError("could not load digits from file");
                   }
                 });
             } else {
@@ -238,12 +247,19 @@
         maxDigit = Math.max.apply(Math, digits);
         
         numSecs = maxDigit - minDigit + 1;
+        
+        if (numSecs >= 150) {
+            showError('range of digits too big (' + numSecs + ') -- you should load a sequence with a smaller range');
+            return;
+        }
+        
         secCircum = Math.PI * (2.0 / numSecs);
         
         // create circular sections
         setupSections();
         
         console.log("starting draw animation");
+        resetErrors();
         drawDigits();
     }    
 
@@ -255,17 +271,6 @@
             .attr("height", height)
             .append("g")
             .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");  // set to the center
-
-    /*
-     Create the background symbol at first
-     */
-    /*var bgSymbol = svg.append("text")
-            .attr("id", "bgSymbol")
-            .style("font-size", Math.min(width, height) * 0.5)
-            .text("π");
-    var bgSymbolSize = [bgSymbol.node().clientWidth, bgSymbol.node().clientHeight];
-    bgSymbol.attr("dx", -bgSymbolSize[0] / 2.0);
-    bgSymbol.attr("dy", bgSymbolSize[1] / 4.0);*/
 
 
     function createArcData() {
@@ -323,7 +328,9 @@
          */
         var sectionText = section.append("text")
                 .attr("x", 4)
-                .attr("dy", 22);
+                .attr("dy", 22)
+                .style("font-size", Math.max((10.0 / numSecs) * 22.0, 6.0));
+        
         sectionText.append("textPath")
                 .attr("xlink:href", function(d, i) { return "#section" + i; })
                 .text(function(d) { return d.value; });
