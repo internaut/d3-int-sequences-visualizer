@@ -1,17 +1,76 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-<title>Circular decimal places with d3.js</title>
+<title>Circular decimal places visualization of integer sequences with d3.js</title>
 <style>
     body {
-      font: 10px sans-serif;
-          background: black;
-          color: white;
+        font: 0.8em sans-serif;
+        background: black;
+        color: white;
+        margin: 0;
+        padding: 0;
+    }
+    
+    #header {
+        padding-top: 2em;
+        padding-bottom: 2em;
+        background: white;
+        color: black;
+        width: 100%;
+        text-align: center;
+        font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+        text-transform: uppercase;
+    }
+        
+    #header h1, #header h2 {
+        margin-top: 0;
+        font-weight: normal;
+    }
+    
+    #seq_name {
+        padding-top: 0.7em;
+        margin-bottom: 0em;
+    }
+    
+    #header hr {
+        width: 20%;
+        border: 0;
+        border-bottom: 1px solid black;
+    }
+    
+    #canvas {
+        width: 100%;
+    }
+    
+    #options {
+        margin-top: 5em;
+        padding: 2em 1em 2em 1em;
+        color: black;
+        background: white;
+    }
+    
+    #options .container {
+        width: 50%;
+        min-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    #options fieldset {
+        border: none;
+        border-top: 1px solid black;
+        margin-bottom: 2em;
+    }
+    
+    #options legend {
+        text-transform: uppercase;
     }
 
     svg {
         background: black;
-        border: 1px solid white;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
     }
 
     .section text {
@@ -39,12 +98,30 @@
         color: red;
         margin: 2em 0 2em 0;
     }
+    
+    #footer {
+        padding: 2em 1em 2em 1em;
+        text-align: center;
+        font-size: 0.7em;
+    }
+    
+    #footer a {
+        color: white;
+        text-decoration: underline;
+    }
 </style>
 
 <script src="d3.js" charset="utf-8"></script>
 
 </head>
 <body>
+
+<div id="header">
+    <h1>Circular decimal places visualization</h1>
+    <h2>of integer sequences with d3.js</h2>
+    <hr>
+    <h1 id="seq_name"></h1>
+</div>
 
 <div id="canvas">
 
@@ -54,55 +131,58 @@
 </div>
 
 <div id="options">
-    <fieldset>
-        <legend>Integer sequence</legend>
-        <label for="constant_from_file">Choose an integer sequence</label>
-        <select id="constant_from_file" name="constant_from_file"></select>
-        <br>
+    <div class="container">
+        <fieldset>
+            <legend>Integer sequence</legend>
+            <label for="constant_from_file">Choose an integer sequence</label>
+            <select id="constant_from_file" name="constant_from_file"></select>
+            <br>
     
-        <div class="other_sequence_fields">
-            <label for="other_sequence">Load this OEIS Number</label>
-            <input id="other_sequence" type="text" value="A...">
-            <input id="other_sequence_btn" type="button" value="OK">
-        </div>
-    </fieldset>
-    <fieldset>
-        <legend>Animation options</legend>
-        <label for="anim_type">Animation type</label>
-        <select id="anim_type" name="anim_type">
-            <option value="automatic">automatic</option>
-            <option value="manual">manual</option>
-        </select>
+            <div class="other_sequence_fields">
+                <label for="other_sequence">Load this OEIS Number</label>
+                <input id="other_sequence" type="text" value="A...">
+                <input id="other_sequence_btn" type="button" value="OK">
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Animation options</legend>
+            <label for="anim_type">Animation type</label>
+            <select id="anim_type" name="anim_type">
+                <option value="automatic">automatic</option>
+                <option value="manual">manual</option>
+            </select>
         
-        <br>
+            <br>
         
-        <div class="n_digits_automatic">
-            <label for="n_digits">Number of digits to draw</label>
-            <input id="n_digits" type="range" min="2" max="" value="" oninput="n_digits_disp.value = n_digits.value">
-            <output name="n_digits_disp" id="n_digits_disp"></output>
-        </div>
+            <div class="n_digits_automatic">
+                <label for="n_digits">Number of digits to draw</label>
+                <input id="n_digits" type="range" min="2" max="" value="" oninput="n_digits_disp.value = n_digits.value">
+                <output name="n_digits_disp" id="n_digits_disp"></output>
+            </div>
         
-        <div class="n_digits_manual">
-            <label for="anim_frame">Set animation frame</label>
-            <input id="anim_frame" type="range" min="1" max="" value="" oninput="anim_frame_disp.value = anim_frame.value">
-            <output name="anim_frame_disp" id="anim_frame_disp"></output>
-        </div>
-    </fieldset>        
-    <fieldset>
-        <legend>Drawing options</legend>
-        <label for="line_interpolation">Line Interpolation</label>
-        <select id="line_interpolation" name="line_interpolation"></select>
-    </fieldset>
+            <div class="n_digits_manual">
+                <label for="anim_frame">Set animation frame</label>
+                <input id="anim_frame" type="range" min="1" max="" value="" oninput="anim_frame_disp.value = anim_frame.value">
+                <output name="anim_frame_disp" id="anim_frame_disp"></output>
+            </div>
+        </fieldset>        
+        <fieldset>
+            <legend>Drawing options</legend>
+            <label for="line_interpolation">Line Interpolation</label>
+            <select id="line_interpolation" name="line_interpolation"></select>
+        </fieldset>
+    </div>
 </div>
+
+<div id="footer">
+    2016, <a href="https://mkonrad.net/">Markus Konrad</a>. License: <a href="http://www.wtfpl.net/">WTFPL</a>.
+</div>
+
 
 <script>
     /**
      * TODOs:
-     * - title
-     * - center display
      * - documentation
-     * - nicer CSS
-     * - test with FF
      * - export to PDF
      */
 
@@ -317,7 +397,9 @@
         return digitsArr;
     }
     
-    function loadDigitsAndDraw(f) {        
+    function loadDigitsAndDraw(f) {
+        var seqName = /\/(A\d{6,8})\//.exec(f)[1];
+        d3.select('#seq_name').text(seqName);
         var lastSlash = f.lastIndexOf('/') + 1;
         var fLocal = '/digitlists/' + f.substr(lastSlash);
         
