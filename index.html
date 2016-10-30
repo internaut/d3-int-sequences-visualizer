@@ -84,7 +84,7 @@
         
         <div class="n_digits_manual">
             <label for="anim_frame">Set animation frame</label>
-            <input id="anim_frame" type="range" min="2" max="" value="" oninput="anim_frame.value = anim_frame_disp.value">
+            <input id="anim_frame" type="range" min="1" max="" value="" oninput="anim_frame_disp.value = anim_frame.value">
             <output name="anim_frame_disp" id="anim_frame_disp"></output>
         </div>
     </fieldset>        
@@ -98,7 +98,6 @@
 <script>
     /**
      * TODOs:
-     * - manually control animation
      * - title
      * - center display
      * - documentation
@@ -119,11 +118,12 @@
         outerRadius = innerRadius * 1.1,
         middlePointRadius = innerRadius * 0.5;
 
+    var animType = 'automatic';
     var animMaxMs = 500;
     var animFrame = null;
     var numDigitsToDrawDefault = 100;
     var numDigitsToDraw = null;
-    var numDigitsMax = 1000;
+    var numDigitsMax = 200;
     
     var digits = null;      // array of ints. only the digits to draw
     var allDigits = null;   // array of ints. all loaded digits
@@ -220,8 +220,9 @@
     
     
     d3.select('#anim_type').on('change', function() {
+        animType = this.value;
         var hide;
-        if (this.value == 'automatic') {
+        if (animType == 'automatic') {
             hide = 'manual';
         } else {
             hide = 'automatic';
@@ -233,7 +234,15 @@
     
         
     d3.select('#n_digits').on('change', function() {
-        numDigitsToDraw = this.value;
+        numDigitsToDraw = parseInt(this.value);
+
+        initDigitsToDraw();
+        
+        redraw();
+    });
+    
+    d3.select('#anim_frame').on('change', function() {
+        numDigitsToDraw = parseInt(this.value) + 1;
 
         initDigitsToDraw();
         
@@ -334,7 +343,7 @@
         allDigits = parseOEISFile(content);
         
         d3.select('#n_digits').property('max', allDigits.length);
-        d3.select('#anim_frame').property('max', allDigits.length);
+        d3.select('#anim_frame').property('max', allDigits.length - 1);
         
         resetOptions();
         
@@ -527,20 +536,23 @@
                                 return d3.rgb(fillPerDigit(d));
                             });
                 }
-
-                // add connection line
-                // the animation duration slowly gets shorter, to make the animation run faster with time
-                var animMs = animMaxMs * (1 - (1 + Math.log((numAddedLines + 1) / (digits.length - 1)) / (Math.E * Math.E)));
                 
                 // finally add the line path element
                 var connectionLine = connectionGroup.append("path")
                         .attr("d", line([prevPoint, middlePoint, thisPoint]))       // set the line geometry
-                        .style("stroke", function(d) { return "url(#" + gradId })   // set the gradient to use
-                        .style("stroke-opacity", 0.0)
+                        .style("stroke", function(d) { return "url(#" + gradId });  // set the gradient to use
+                
+                if (animType == 'automatic') {
+                    // the animation duration slowly gets shorter, to make the animation run faster with time
+                    var animMs = animMaxMs * (1 - (1 + Math.log((numAddedLines + 1) / (digits.length - 1)) / (Math.E * Math.E)));
+                    connectionLine.style("stroke-opacity", 0.0)
                         .transition()       // make the animation
                         .duration(animMs)
                         .delay(prevAnimMs)  // only start after the previous line animation is finished
                         .style("stroke-opacity", 0.75);
+                } else {
+                    connectionLine.style("stroke-opacity", 0.75);
+                }
 
                 prevAnimMs = prevAnimMs + animMs;
                 numAddedLines++;
