@@ -395,7 +395,8 @@
         var seqName = /\/(A\d{6,8})\//.exec(f)[1];
         d3.select('#seq_name').text(seqName);
         var lastSlash = f.lastIndexOf('/') + 1;
-        var fLocal = '/digitlists/' + f.substr(lastSlash);
+        var fLocal = window.location.protocol + '//' + window.location.hostname
+                   + '/' + window.location.pathname + '/digitlists/' + f.substr(lastSlash);
         
         console.log("will try to load digits from local file '" + fLocal + "'");
         
