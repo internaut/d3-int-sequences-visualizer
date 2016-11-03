@@ -67,4 +67,5 @@ if (preg_match('/^A(\d{6,8})$/', $q, $matches) === 1) {
   main($matches[1]);
 } else {
   header("HTTP/1.0 400 Bad Request");
+  die();
 }
