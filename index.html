@@ -182,7 +182,9 @@
 <script>
     /*
      Define some constants
-     */     
+     */    
+    var OEIS_BASE_URL = 'https://oeis.org/'
+      
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
@@ -389,7 +391,8 @@
     }
     
     function loadDigitsAndDraw(oeisNum) {
-        d3.select('#seq_name').text(oeisNum);
+        var oeisUrl = OEIS_BASE_URL + oeisNum;
+        d3.select('#seq_name').html('<a href="' + oeisUrl + '" target="_blank">' + oeisNum + '</a>');
         var reqUrl = './oeis.php?' + oeisNum;
         
         console.log("will try to load digits from URL '" + reqUrl + "'");
