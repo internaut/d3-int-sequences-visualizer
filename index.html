@@ -182,10 +182,9 @@
 <script>
     /*
      Define some constants
-     */
-     
-    var OEIS_BASE_URL = 'https://oeis.org/';
-     
+     */    
+    var OEIS_BASE_URL = 'https://oeis.org/'
+      
     var width = 700,
         height = 700,
         innerRadius = Math.min(width, height) * .4,
@@ -225,13 +224,14 @@
      */
     
     var constantsOptions = [
-        ['OEIS A002262', OEIS_BASE_URL + 'A002262/b002262.txt'],
-        ['OEIS A025581', OEIS_BASE_URL + 'A025581/b025581.txt'],
-        ['OEIS A000796 (decimal expansion of π)', OEIS_BASE_URL + 'A000796/b000796.txt'],
-        ['OEIS A001113 (decimal expansion of e)', OEIS_BASE_URL + 'A001113/b001113.txt'],
-        ['OEIS A002193 (decimal expansion of √2)', OEIS_BASE_URL + 'A002193/b002193.txt'],
-        ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', OEIS_BASE_URL + 'A001622/b001622.txt'],
-        ['OEIS A000188', OEIS_BASE_URL + 'A000188/b000188.txt'],
+        ['OEIS A002262', 'A002262'],
+        ['OEIS A025581', 'A025581'],
+        ['OEIS A000796 (decimal expansion of π)', 'A000796'],
+        ['OEIS A001113 (decimal expansion of e)', 'A001113'],
+        ['OEIS A002193 (decimal expansion of √2)', 'A002193'],
+        ['OEIS A001622 (decimal expansion of ɸ - golden ratio)', 'A001622'],
+        ['OEIS A000188', 'A000188'],
+        ['OEIS A089088', 'A089088'],
         ['other ...', '_']
     ];
     
@@ -273,8 +273,7 @@
         console.log("other sequence:", oeisNum);
         if (/A\d{6,8}/.test(oeisNum)) {
            seqNumField.style("border", "inherit");
-           var bFileUrl = OEIS_BASE_URL + oeisNum + '/b' + oeisNum.substr(1)  + '.txt';
-           loadDigitsAndDraw(bFileUrl);
+           loadDigitsAndDraw(oeisNum);
         } else {
            console.log('incorrect OEIS A-number format');
            seqNumField.style("border", "1px solid red");
@@ -310,17 +309,17 @@
     d3.select('#n_digits').on('change', function() {
         numDigitsToDraw = parseInt(this.value);
 
-        initDigitsToDraw();
-        
-        redraw();
+        if (initDigitsToDraw()) {
+          redraw();
+        }
     });
     
     d3.select('#anim_frame').on('change', function() {
         numDigitsToDraw = parseInt(this.value) + 1;
 
-        initDigitsToDraw();
-        
-        redraw();
+        if (initDigitsToDraw()) {
+          redraw();
+        }
     });
     
     function resetOptions() {
@@ -391,25 +390,16 @@
         return digitsArr;
     }
     
-    function loadDigitsAndDraw(f) {
-        var seqName = /\/(A\d{6,8})\//.exec(f)[1];
-        d3.select('#seq_name').text(seqName);
-        var lastSlash = f.lastIndexOf('/') + 1;
-        var fLocal = window.location.protocol + '//' + window.location.hostname
-                   + '/' + window.location.pathname + '/digitlists/' + f.substr(lastSlash);
+    function loadDigitsAndDraw(oeisNum) {
+        var oeisUrl = OEIS_BASE_URL + oeisNum;
+        d3.select('#seq_name').html('<a href="' + oeisUrl + '" target="_blank">' + oeisNum + '</a>');
+        var reqUrl = './oeis.php?' + oeisNum;
         
-        console.log("will try to load digits from local file '" + fLocal + "'");
+        console.log("will try to load digits from URL '" + reqUrl + "'");
         
-        d3.text(fLocal, function(error, data) {
+        d3.text(reqUrl, function(error, data) {
             if (error !== null) {
-                console.log("failed. will try to load digits from remote file '" + f + "'");
-                d3.text(f, function(error, data) {            
-                  if (error === null && data !== null) {
-                      handleContentFromFile(data);
-                  } else {
-                      showError("could not load digits from file");
-                  }
-                });
+                showError("could not load digits", oeisNum);
             } else {
                 handleContentFromFile(data);
             }
@@ -424,9 +414,9 @@
         
         resetOptions();
         
-        initDigitsToDraw();
-        
-        redraw();
+        if (initDigitsToDraw()) {
+          redraw();
+        }
     }
     
     /*
@@ -442,8 +432,10 @@
         
         if (numSecs >= 150) {
             showError('range of digits too big (' + numSecs + ') -- you should load a sequence with a smaller range');
-            return;
+            return false;
         }
+        
+        return true;
     }
     
     function redraw() {
